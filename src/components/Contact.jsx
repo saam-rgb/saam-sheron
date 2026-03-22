@@ -1,14 +1,12 @@
-import React, { useRef, useState } from "react";
-import emailjs from "@emailjs/browser";
+import React, { useState } from "react";
 
 const Contact = () => {
-  const form = useRef();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     message: "",
   });
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("idle");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -18,33 +16,42 @@ const Contact = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setStatus("loading");
 
-    emailjs
-      .sendForm(
-        "service_ec5y0ts", // Service ID from EmailJS
-        "template_7hksf65", // Template ID from EmailJS
-        form.current,
-        {
-          publicKey: "Y-hkeCmmRiuid1AiS",
-        }
-      )
-      .then(
-        (result) => {
-          setStatus("Message Sent Successfully!");
-
-          setFormData({ name: "", email: "", message: "" });
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        (error) => {
-          setStatus("Error Sending Message. Please try again.", error);
-        }
-      );
+        body: JSON.stringify({
+          access_key: import.meta.env.VITE_WEB3FORMS_KEY,
+          name: formData.name,
+          email: formData.email,
+          message: formData.message,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setStatus("success");
+        setFormData({ name: "", email: "", message: "" });
+      } else {
+        setStatus("error");
+      }
+    } catch (error) {
+      setStatus("error");
+    }
   };
 
   return (
     <section id="contact" className="py-20 bg-light-gray">
       <div className="container mx-auto px-4">
+        {/* Heading */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-primary mb-6">Contact Me</h2>
           <p className="text-lg text-secondary">
@@ -56,7 +63,8 @@ const Contact = () => {
         {/* Contact Form */}
         <div className="flex justify-center">
           <div className="w-full md:w-1/2 bg-white p-8 rounded-lg shadow-lg">
-            <form onSubmit={handleSubmit} ref={form}>
+            <form onSubmit={handleSubmit}>
+              {/* Name Field */}
               <div className="mb-4">
                 <label
                   htmlFor="name"
@@ -74,6 +82,7 @@ const Contact = () => {
                 />
               </div>
 
+              {/* Email Field */}
               <div className="mb-4">
                 <label
                   htmlFor="email"
@@ -91,6 +100,7 @@ const Contact = () => {
                 />
               </div>
 
+              {/* Message Field */}
               <div className="mb-4">
                 <label
                   htmlFor="message"
@@ -104,18 +114,27 @@ const Contact = () => {
                   onChange={handleChange}
                   required
                   rows="5"
-                  className="w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                  className="w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
               </div>
 
+              {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-primary text-white py-3 rounded-md hover:bg-secondary transition duration-300">
-                Send Message
+                disabled={status === "loading"}
+                className="w-full bg-primary text-white py-3 rounded-md hover:bg-secondary transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                {status === "loading" ? "Sending..." : "Send Message"}
               </button>
 
-              {status && (
-                <p className="mt-4 text-center text-lg text-secondary">
-                  {status}
+              {/* Status Messages */}
+              {status === "success" && (
+                <p className="mt-4 text-center text-lg text-green-600">
+                  ✅ Message Sent Successfully!
+                </p>
+              )}
+              {status === "error" && (
+                <p className="mt-4 text-center text-lg text-red-500">
+                  ❌ Error Sending Message. Please try again.
                 </p>
               )}
             </form>
